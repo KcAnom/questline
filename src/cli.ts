@@ -16,7 +16,7 @@ import { QuestScheduler } from "./scheduler.ts";
 import { QuestStore } from "./store.ts";
 import { fmtDuration, fmtUsd } from "./fmt.ts";
 
-const VERSION = "0.1.0";
+const VERSION = "0.1.1";
 
 const HELP = `questline ${VERSION} — durable quest queue for CLI coding agents
 
