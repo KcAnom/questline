@@ -1,0 +1,39 @@
+{
+  "name": "questforge",
+  "version": "0.1.0",
+  "description": "Durable, crash-safe work queue and TUI for CLI coding agents (claude, pi, codex, …): leases with fencing, heartbeats, retries with backoff, dependencies, priorities, scheduling, dedupe, per-attempt telemetry.",
+  "type": "module",
+  "bin": {
+    "questforge": "bin/questforge.js"
+  },
+  "engines": {
+    "node": ">=22.11"
+  },
+  "files": [
+    "bin",
+    "src",
+    "README.md"
+  ],
+  "scripts": {
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "keywords": [
+    "agent",
+    "queue",
+    "tui",
+    "cli",
+    "durable",
+    "claude",
+    "orchestration"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/KcAnom/questforge.git"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/node": "^26.1.1",
+    "vitest": "^4.1.10"
+  }
+}
