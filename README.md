@@ -1,4 +1,4 @@
-# ⚒ questforge
+# ⚒ questline
 
 A durable, crash-safe work queue and TUI for CLI coding agents — Claude Code, pi, codex, or anything with a print mode. Queue tasks, run them through your agent, and never lose work to a crashed session.
 
@@ -12,30 +12,30 @@ A durable, crash-safe work queue and TUI for CLI coding agents — Claude Code, 
 ## Install
 
 ```bash
-npm install -g questforge     # needs node >= 22
+npm install -g questline     # needs node >= 22
 ```
 
 ## Quick start
 
 ```bash
 cd your-project
-questforge add build "Write unit tests for src/parser.ts" --name tests
-questforge run                # claims + executes via your agent, prints result
-questforge dash               # TUI: ↑↓ select · ←→ filter · / search · ⏎ details · r/R/x
+questline add build "Write unit tests for src/parser.ts" --name tests
+questline run                # claims + executes via your agent, prints result
+questline dash               # TUI: ↑↓ select · ←→ filter · / search · ⏎ details · r/R/x
 ```
 
 Queue several and let the daemon drain them:
 
 ```bash
-questforge add explore "Map this codebase" --priority 5
-questforge add build "Fix the flaky test" --max-attempts 3
-questforge add review "Review the diff" --depends q-abc12345
-questforge daemon             # runs everything, respecting priority/deps/backoff
+questline add explore "Map this codebase" --priority 5
+questline add build "Fix the flaky test" --max-attempts 3
+questline add review "Review the diff" --depends q-abc12345
+questline daemon             # runs everything, respecting priority/deps/backoff
 ```
 
 ## The executor: bring your own agent
 
-By default quests run through **Claude Code**: `claude -p "<task>"`. Configure any agent in `~/.questforge/config.json` (global) or `<project>/.questforge.json` (per project):
+By default quests run through **Claude Code**: `claude -p "<task>"`. Configure any agent in `~/.questline/config.json` (global) or `<project>/.questline.json` (per project):
 
 ```jsonc
 {
@@ -67,7 +67,7 @@ Placeholders: `{task}` (includes context), `{context}`, `{project}`, `{role}`. T
 
 ```jsonc
 {
-  "dbPath": "~/.questforge/quests.sqlite",  // point at pi's journal to share its queue
+  "dbPath": "~/.questline/quests.sqlite",  // point at pi's journal to share its queue
   "maxHistory": 500,
   "leaseTtlMs": 120000,
   "heartbeatMs": 30000,
@@ -78,7 +78,7 @@ Placeholders: `{task}` (includes context), `{context}`, `{project}`, `{role}`. T
 }
 ```
 
-Quests are **per-project** (keyed by the directory you run commands in), stored in one SQLite database (WAL). Compatible with the [pi-fairy-tales](https://github.com/KcAnom/pi-fairy-tales) quest journal — set `dbPath` to `~/.pi/agent/fairy-tales-quests.sqlite` and questforge and pi share one queue.
+Quests are **per-project** (keyed by the directory you run commands in), stored in one SQLite database (WAL). Compatible with the [pi-fairy-tales](https://github.com/KcAnom/pi-fairy-tales) quest journal — set `dbPath` to `~/.pi/agent/fairy-tales-quests.sqlite` and questline and pi share one queue.
 
 ## License
 

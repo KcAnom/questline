@@ -1,5 +1,5 @@
 /**
- * questforge CLI: a durable, crash-safe work queue for CLI coding agents.
+ * questline CLI: a durable, crash-safe work queue for CLI coding agents.
  *
  *   add · list · show · run · daemon · dash · cancel · retry · consume ·
  *   events · runs · health
@@ -18,9 +18,9 @@ import { fmtDuration, fmtUsd } from "./fmt.ts";
 
 const VERSION = "0.1.0";
 
-const HELP = `questforge ${VERSION} — durable quest queue for CLI coding agents
+const HELP = `questline ${VERSION} — durable quest queue for CLI coding agents
 
-Usage: questforge <command> [args]
+Usage: questline <command> [args]
 
   add <role> <task>      Queue work  (--name, --priority N, --context TEXT,
                          --depends id1,id2, --max-attempts N, --not-before ISO,
@@ -37,7 +37,7 @@ Usage: questforge <command> [args]
   runs <id>              Per-attempt telemetry history
   health                 DB integrity and queue counts
 
-Executor (config: ~/.questforge/config.json or <project>/.questforge.json):
+Executor (config: ~/.questline/config.json or <project>/.questline.json):
   default: ["claude", "-p", "{task}"] — any print-mode CLI agent works, e.g.
   {"executor": {"command": ["pi", "--mode", "text", "{task}"]}}
   Per-role: {"executors": {"build": {"command": [...]}}}
@@ -93,7 +93,7 @@ export async function main(argv: string[]): Promise<number> {
     });
     const [role, ...taskParts] = positionals;
     const task = taskParts.join(" ");
-    if (!role || !task) { console.error('usage: questforge add <role> "task..." [flags]'); return 2; }
+    if (!role || !task) { console.error('usage: questline add <role> "task..." [flags]'); return 2; }
     const notBefore = values["not-before"] ? Date.parse(values["not-before"]) : undefined;
     if (values["not-before"] && Number.isNaN(notBefore)) { console.error(`cannot parse --not-before "${values["not-before"]}"`); return 2; }
     const store = openStore(cfg);
@@ -109,7 +109,7 @@ export async function main(argv: string[]): Promise<number> {
         retainUntilConsumed: values.retain,
       });
       console.log(`queued ${q.id} · ${q.role} · ${q.name}${q.dedupeKey && store.events(q.id, 1)[0]?.event === "deduped" ? " (existing quest returned by dedupe key)" : ""}`);
-      console.log(`run it:  questforge run ${q.id}   (or start the daemon: questforge daemon)`);
+      console.log(`run it:  questline run ${q.id}   (or start the daemon: questline daemon)`);
       return 0;
     } finally { store.close(); }
   }
@@ -120,14 +120,14 @@ export async function main(argv: string[]): Promise<number> {
     try {
       const rows = store.list(cwd, values.limit ? Number(values.limit) : 30);
       if (values.json) console.log(JSON.stringify(rows, null, 2));
-      else console.log(rows.length ? questTableText(rows) : "No quests for this project. Add one: questforge add <role> \"task\"");
+      else console.log(rows.length ? questTableText(rows) : "No quests for this project. Add one: questline add <role> \"task\"");
       return 0;
     } finally { store.close(); }
   }
 
   if (command === "show" || command === "events" || command === "runs") {
     const id = rest[0];
-    if (!id) { console.error(`usage: questforge ${command} <id>`); return 2; }
+    if (!id) { console.error(`usage: questline ${command} <id>`); return 2; }
     const store = openStore(cfg);
     try {
       const q = store.get(id);
@@ -152,7 +152,7 @@ export async function main(argv: string[]): Promise<number> {
 
   if (command === "cancel" || command === "retry" || command === "consume") {
     const id = rest[0];
-    if (!id) { console.error(`usage: questforge ${command} <id>`); return 2; }
+    if (!id) { console.error(`usage: questline ${command} <id>`); return 2; }
     const store = openStore(cfg);
     try {
       const ok = command === "cancel" ? store.cancel(id, cwd) : command === "retry" ? store.requeue(id, cwd) : store.markConsumed(id, cwd);
@@ -203,7 +203,7 @@ export async function main(argv: string[]): Promise<number> {
       dispatch: (claimed) => dispatchClaimed(runtime, cfg, claimed, (s) => console.log(`[${new Date().toISOString()}] ${s}`)),
       onError: (err) => console.error(`[scheduler] ${String(err)}`),
     });
-    console.log(`questforge daemon · project ${cwd} · concurrency ${cfg.scheduler.maxConcurrent} · poll ${cfg.scheduler.pollMs}ms · Ctrl-C to stop`);
+    console.log(`questline daemon · project ${cwd} · concurrency ${cfg.scheduler.maxConcurrent} · poll ${cfg.scheduler.pollMs}ms · Ctrl-C to stop`);
     scheduler.start();
     await new Promise<void>((resolveWait) => {
       const stop = () => {
@@ -246,7 +246,7 @@ export async function main(argv: string[]): Promise<number> {
       });
       const handle = runTui(component, {
         onQuit: () => {
-          if (inFlight.size) console.log(`note: ${inFlight.size} in-flight quest(s) interrupted; they are reclaimable (questforge run / daemon).`);
+          if (inFlight.size) console.log(`note: ${inFlight.size} in-flight quest(s) interrupted; they are reclaimable (questline run / daemon).`);
           runtime.shutdown(cwd);
           store.close();
           resolveQuit();
@@ -257,6 +257,6 @@ export async function main(argv: string[]): Promise<number> {
     return 0;
   }
 
-  console.error(`unknown command "${command}" — questforge help`);
+  console.error(`unknown command "${command}" — questline help`);
   return 2;
 }

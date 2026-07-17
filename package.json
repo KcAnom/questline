@@ -1,10 +1,10 @@
 {
-  "name": "questforge",
+  "name": "questline",
   "version": "0.1.0",
   "description": "Durable, crash-safe work queue and TUI for CLI coding agents (claude, pi, codex, …): leases with fencing, heartbeats, retries with backoff, dependencies, priorities, scheduling, dedupe, per-attempt telemetry.",
   "type": "module",
   "bin": {
-    "questforge": "bin/questforge.js"
+    "questline": "bin/questline.js"
   },
   "engines": {
     "node": ">=22.11"
@@ -29,7 +29,7 @@
   ],
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/KcAnom/questforge.git"
+    "url": "git+https://github.com/KcAnom/questline.git"
   },
   "license": "MIT",
   "devDependencies": {

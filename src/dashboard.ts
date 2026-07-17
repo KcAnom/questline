@@ -169,7 +169,7 @@ export function dashboard(opts: DashboardOptions): DashboardComponent {
       clampSelection(rows);
       const t = now();
       const lines: string[] = [];
-      lines.push(theme.bold(theme.accent(" ⚒ questforge")) + theme.dim(`  ${project}  ·  ${rows.length} shown`));
+      lines.push(theme.bold(theme.accent(" ➳ questline")) + theme.dim(`  ${project}  ·  ${rows.length} shown`));
       lines.push(
         QUEST_FILTERS.map((f) => (f === state.filter ? theme.accent(`[${f}]`) : theme.dim(` ${f} `))).join(" ") +
           "  " +
@@ -180,7 +180,7 @@ export function dashboard(opts: DashboardOptions): DashboardComponent {
               : theme.dim("/ to search")),
       );
       lines.push(theme.dim("─".repeat(Math.max(10, Math.min(width - 2, 110)))));
-      if (!rows.length) lines.push(theme.muted("  No quests match. (add one: questforge add <role> \"task\")"));
+      if (!rows.length) lines.push(theme.muted("  No quests match. (add one: questline add <role> \"task\")"));
       const vp = viewport();
       for (let i = state.offset; i < Math.min(rows.length, state.offset + vp); i++) {
         const q = rows[i];

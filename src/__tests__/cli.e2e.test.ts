@@ -9,11 +9,11 @@ import { tmpdir } from "node:os";
 import { join, resolve } from "node:path";
 import { test } from "vitest";
 
-const BIN = resolve(import.meta.dirname, "..", "..", "bin", "questforge.js");
+const BIN = resolve(import.meta.dirname, "..", "..", "bin", "questline.js");
 
 function project(executorScript: string) {
   const dir = mkdtempSync(join(tmpdir(), "qf-e2e-"));
-  writeFileSync(join(dir, ".questforge.json"), JSON.stringify({
+  writeFileSync(join(dir, ".questline.json"), JSON.stringify({
     dbPath: join(dir, "quests.sqlite"),
     executor: { command: ["sh", "-c", executorScript], timeoutMs: 30_000 },
     scheduler: { pollMs: 100, maxConcurrent: 2 },

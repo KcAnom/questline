@@ -1,6 +1,6 @@
 /**
- * questforge configuration. Merge order (later wins):
- *   built-in defaults → ~/.questforge/config.json → <project>/.questforge.json
+ * questline configuration. Merge order (later wins):
+ *   built-in defaults → ~/.questline/config.json → <project>/.questline.json
  */
 import { readFileSync } from "node:fs";
 import { homedir } from "node:os";
@@ -32,7 +32,7 @@ export interface QuestforgeConfig {
 }
 
 export const DEFAULTS: QuestforgeConfig = {
-  dbPath: "~/.questforge/quests.sqlite",
+  dbPath: "~/.questline/quests.sqlite",
   maxHistory: 500,
   leaseTtlMs: 120_000,
   heartbeatMs: 30_000,
@@ -68,8 +68,8 @@ function merge<T>(base: T, over: Partial<T>): T {
 }
 
 export function loadConfig(cwd: string): QuestforgeConfig {
-  const user = readJson(join(homedir(), ".questforge", "config.json"));
-  const project = readJson(join(cwd, ".questforge.json"));
+  const user = readJson(join(homedir(), ".questline", "config.json"));
+  const project = readJson(join(cwd, ".questline.json"));
   return merge(merge(DEFAULTS, user as Partial<QuestforgeConfig>), project as Partial<QuestforgeConfig>);
 }
 
