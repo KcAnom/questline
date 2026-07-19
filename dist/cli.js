@@ -15,7 +15,7 @@ import { QuestScheduler } from "./scheduler.js";
 import { DependencyValidationError, QuestStore } from "./store.js";
 import { startHttpApi } from "./api.js";
 import { fmtDuration, fmtTokens, fmtUsd } from "./fmt.js";
-const VERSION = "0.1.1";
+const VERSION = "0.1.2";
 const HELP = `questline ${VERSION} — durable quest queue for CLI coding agents
 
 Usage: questline <command> [args]

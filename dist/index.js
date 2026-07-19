@@ -6,4 +6,4 @@ export * from "./config.js";
 export * from "./cron.js";
 export * from "./api.js";
 export * from "./fmt.js";
-export const VERSION = "0.1.1";
+export const VERSION = "0.1.2";

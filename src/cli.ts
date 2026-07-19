@@ -16,7 +16,7 @@ import { DependencyValidationError, QuestStore, type QuestRecord } from "./store
 import { startHttpApi } from "./api.ts";
 import { fmtDuration, fmtTokens, fmtUsd } from "./fmt.ts";
 
-const VERSION = "0.1.1";
+const VERSION = "0.1.2";
 
 const HELP = `questline ${VERSION} — durable quest queue for CLI coding agents
 
