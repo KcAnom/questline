@@ -3,6 +3,14 @@
   "version": "0.1.1",
   "description": "Durable, crash-safe work queue and TUI for CLI coding agents (claude, pi, codex, \u2026): leases with fencing, heartbeats, retries with backoff, dependencies, priorities, scheduling, dedupe, per-attempt telemetry.",
   "type": "module",
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
   "bin": {
     "questline": "bin/questline.js"
   },

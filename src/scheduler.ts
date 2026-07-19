@@ -1,13 +1,5 @@
 /**
  * QuestScheduler: continuous, crash-safe draining of the durable quest queue.
- *
- * One scheduler per project across all sessions (enforced by the store's
- * scheduler lease — losing the lease pauses claiming, it never double-runs
- * work). Eligibility itself lives in QuestStore.claimNext: priority order,
- * not-before schedules, retry backoff, dependency gates, and expired-lease
- * reclamation all apply to scheduled claims exactly as they do to manual ones.
- * A pause hook lets the host stop new claims (e.g. session cost cap) without
- * touching work already in flight.
  */
 import type { ClaimedQuest, QuestRuntime } from "./runtime.ts";
 
@@ -18,15 +10,15 @@ export interface QuestSchedulerOptions {
   pollMs?: number;
   /** Max quests this scheduler keeps in flight at once. Default 2. */
   maxConcurrent?: number;
+  /** Optional per-role concurrency caps. */
+  roleConcurrency?: Record<string, number>;
   /** Scheduler-lease TTL; renewed every tick. Default 3× pollMs. */
   leaseTtlMs?: number;
   /** Return a human-readable reason to pause claiming, or undefined to run. */
   isPaused?: () => string | undefined;
-  /** unref() the poll timer so it never keeps the process alive (embedded
-   *  hosts). A standalone daemon MUST pass false or it exits immediately. */
+  /** unref() the poll timer so it never keeps the process alive (embedded hosts). */
   unrefTimer?: boolean;
-  /** Execute a claimed quest to settlement (complete/fail is the callee's job,
-   *  typically via QuestRuntime.run or the extension's dispatch path). */
+  /** Execute a claimed quest to settlement. */
   dispatch: (claimed: ClaimedQuest) => Promise<unknown>;
   onError?: (err: unknown) => void;
 }
@@ -41,11 +33,13 @@ export interface QuestSchedulerStatus {
 
 export class QuestScheduler {
   private timer?: ReturnType<typeof setInterval>;
-  private inFlight = new Set<string>();
+  private inFlight = new Map<string, Promise<unknown>>();
+  private inFlightRoles = new Map<string, number>();
   private leaseHeld = false;
   private pausedReason?: string;
   private lastTickAt?: number;
   private draining = false;
+  private stopped = false;
   private readonly pollMs: number;
   private readonly maxConcurrent: number;
   private readonly leaseTtlMs: number;
@@ -58,12 +52,14 @@ export class QuestScheduler {
 
   start(): void {
     if (this.timer) return;
+    this.stopped = false;
     this.timer = setInterval(() => this.tick(), this.pollMs);
-    if (this.options.unrefTimer !== false) (this.timer as { unref?: () => void }).unref?.();
+    if (this.options.unrefTimer !== false) this.timer.unref?.();
     this.tick();
   }
 
   stop(): void {
+    this.stopped = true;
     if (this.timer) clearInterval(this.timer);
     this.timer = undefined;
     if (this.leaseHeld) {
@@ -72,6 +68,10 @@ export class QuestScheduler {
       } catch { /* store may already be closed */ }
       this.leaseHeld = false;
     }
+  }
+
+  async waitForIdle(): Promise<void> {
+    while (this.inFlight.size) await Promise.allSettled([...this.inFlight.values()]);
   }
 
   status(): QuestSchedulerStatus {
@@ -86,33 +86,46 @@ export class QuestScheduler {
 
   /** Run one drain pass now (also called on every interval tick). */
   tick(): void {
-    if (this.draining) return;
+    if (this.draining || this.stopped) return;
     this.draining = true;
     try {
       this.lastTickAt = Date.now();
       const { runtime, project } = this.options;
-      this.pausedReason = this.options.isPaused?.();
-      if (this.pausedReason) return;
       this.leaseHeld = runtime.store.acquireSchedulerLease(project, runtime.ownerSession, this.leaseTtlMs);
       if (!this.leaseHeld) return;
-      while (this.inFlight.size < this.maxConcurrent) {
-        const claimed = runtime.claimNext(project);
+      runtime.store.materializeDueRecurring(project);
+      const durable = runtime.store.projectControl(project);
+      this.pausedReason = durable.paused ? durable.reason ?? "queue paused" : this.options.isPaused?.();
+      if (this.pausedReason) return;
+      while (!this.stopped && this.inFlight.size < this.maxConcurrent) {
+        const excluded = this.excludedRoles();
+        const claimed = runtime.claimNext(project, { excludeRoles: excluded });
         if (!claimed) break;
         const id = claimed.quest.id;
-        this.inFlight.add(id);
-        Promise.resolve()
+        this.inFlightRoles.set(claimed.quest.role, (this.inFlightRoles.get(claimed.quest.role) ?? 0) + 1);
+        const promise = Promise.resolve()
           .then(() => this.options.dispatch(claimed))
           .catch((err) => this.options.onError?.(err))
           .finally(() => {
             this.inFlight.delete(id);
-            // A finished quest may unblock dependents — drain again promptly.
-            if (this.timer) this.tick();
+            this.inFlightRoles.set(claimed.quest.role, Math.max(0, (this.inFlightRoles.get(claimed.quest.role) ?? 1) - 1));
+            if (this.timer && !this.stopped) this.tick();
           });
+        this.inFlight.set(id, promise);
       }
     } catch (err) {
       this.options.onError?.(err);
     } finally {
       this.draining = false;
     }
+  }
+
+  private excludedRoles(): string[] {
+    const caps = this.options.roleConcurrency ?? {};
+    const excluded: string[] = [];
+    for (const [role, cap] of Object.entries(caps)) {
+      if ((this.inFlightRoles.get(role) ?? 0) >= cap) excluded.push(role);
+    }
+    return excluded;
   }
 }

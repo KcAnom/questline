@@ -71,18 +71,29 @@ export function questTableText(rows: QuestRecord[], filter: QuestFilter = "all",
   return visible.map((q) => questRowText(q)).join("\n");
 }
 
-export function questDetailLines(q: QuestRecord, runs: QuestRunRecord[], events: Array<{ event: string; at: number; data: unknown }>): string[] {
+export function questDetailLines(
+  q: QuestRecord,
+  runs: QuestRunRecord[],
+  events: Array<{ event: string; at: number; data: unknown }>,
+  artifacts: Array<{ kind: string; attempt: number; path: string; bytes: number }> = [],
+): string[] {
   const lines: string[] = [];
   lines.push(`task: ${q.task}`);
   if (q.context) lines.push(`context: ${q.context.slice(0, 300)}`);
   if (q.dependsOn.length) lines.push(`depends on: ${q.dependsOn.join(", ")}`);
   if (q.chain) lines.push(`chain: ${JSON.stringify(q.chain)}`);
+  if (q.groupId) lines.push(`group: ${q.groupId}${q.groupStep ? ` · step ${q.groupStep}` : ""}`);
+  if (q.recurrenceId) lines.push(`recurrence: ${q.recurrenceId}${q.occurrenceAt ? ` · ${new Date(q.occurrenceAt).toISOString()}` : ""}`);
   if (q.dedupeKey) lines.push(`dedupe: ${q.dedupeKey}${q.retainUntilConsumed ? q.consumedAt ? " · consumed" : " · retained" : ""}`);
   for (const r of runs.slice(0, 5)) {
     const dur = r.finishedAt ? fmtDuration(r.finishedAt - r.startedAt) : "…";
     lines.push(
-      `attempt ${r.attempt}: ${r.outcome ?? "running"} · ${shortModelId(r.model ?? "?")}${r.tier ? ` [${r.tier}]` : ""} · t${r.turns} · ${fmtTokens(r.tokens)} tok · ${fmtUsd(r.costUsd)} · ${dur}${r.lastActivity ? ` · ${r.lastActivity}` : ""}`,
+      `attempt ${r.attempt}: ${r.outcome ?? "running"} · ${r.provider ? `${r.provider}/` : ""}${shortModelId(r.model ?? "?")}${r.tier ? ` [${r.tier}]` : ""} · t${r.turns} · ${fmtTokens(r.tokens)} tok · ${fmtUsd(r.costUsd)} · ${dur}${r.lastActivity ? ` · ${r.lastActivity}` : ""}`,
     );
+  }
+  if (artifacts.length) {
+    lines.push("artifacts:");
+    for (const a of artifacts.slice(0, 6)) lines.push(`  ${a.kind} attempt ${a.attempt}: ${a.path} (${a.bytes} bytes)`);
   }
   const outcome = q.result ?? q.error;
   if (outcome) {
@@ -199,8 +210,9 @@ export function dashboard(opts: DashboardOptions): DashboardComponent {
         lines.push(theme.dim("─".repeat(Math.max(10, Math.min(width - 2, 110)))));
         let runs: QuestRunRecord[] = [];
         let events: Array<{ event: string; at: number; data: unknown }> = [];
-        try { runs = store.runs(sel.id, 5); events = store.events(sel.id, 6); } catch { /* closing */ }
-        for (const l of questDetailLines(sel, runs, events)) lines.push(theme.muted(`  ${l.slice(0, Math.max(20, width - 4))}`));
+        let artifacts: Array<{ kind: string; attempt: number; path: string; bytes: number }> = [];
+        try { runs = store.runs(sel.id, 5); events = store.events(sel.id, 6); artifacts = store.artifacts(sel.id); } catch { /* closing */ }
+        for (const l of questDetailLines(sel, runs, events, artifacts)) lines.push(theme.muted(`  ${l.slice(0, Math.max(20, width - 4))}`));
       }
       if (state.status) lines.push(theme.warning(` ${state.status}`));
       lines.push(theme.dim(" ↑↓ select · ←→ filter · / search · ⏎ details · r run · R retry · x cancel · q quit"));
