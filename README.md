@@ -127,11 +127,16 @@ Run with `questline pipeline run plan-build-review`.
 ## Recurring quests
 
 ```bash
-questline recurring add nightly-review --cron "0 2 * * *" --role review --task "Review today's diff" --catch-up one
+questline recurring add nightly-review \
+  --cron "0 2 * * *" \
+  --timezone America/New_York \
+  --role review \
+  --task "Review today's diff" \
+  --catch-up one
 questline daemon
 ```
 
-The scheduler materializes due occurrences while it owns the scheduler lease. Supported catch-up modes: `one`, `all`, `skip`.
+Cron expressions are standard five-field (`minute hour dom month dow`). Next-run times are computed with **IANA timezones and DST** via `cron-parser` (civil time in the given zone; default `UTC`). The scheduler materializes due occurrences while it owns the scheduler lease. Supported catch-up modes: `one`, `all`, `skip`.
 
 ## Config reference
 
