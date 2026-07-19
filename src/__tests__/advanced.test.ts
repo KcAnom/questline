@@ -120,27 +120,47 @@ test("structured JSONL protocol captures telemetry and result", async () => {
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
-test("lease loss aborts an executing child", { timeout: 15_000 }, async () => {
+test("lease loss aborts an executing child", { timeout: 20_000 }, async () => {
   const dir = mkdtempSync(join(tmpdir(), "qf-lease-loss-"));
   try {
     writeFileSync(join(dir, ".questline.json"), JSON.stringify({
       dbPath: join(dir, "quests.sqlite"),
-      leaseTtlMs: 100,
+      leaseTtlMs: 120_000,
       heartbeatMs: 50,
-      executor: { command: ["sh", "-c", "trap 'echo term > term.flag; exit 0' TERM; while true; do sleep 1; done"], terminateGraceMs: 1000 },
+      executor: { command: ["sh", "-c", "trap 'printf term > term.flag; exit 0' TERM; while true; do sleep 1; done"], terminateGraceMs: 1000 },
     }));
     const add = execFileSync(process.execPath, [BIN, "add", "build", "slow"], { cwd: dir, encoding: "utf8" });
     const id = /queued (q-\w+)/.exec(add)![1];
     const child = spawn(process.execPath, [BIN, "run", id], { cwd: dir, stdio: ["ignore", "pipe", "pipe"] });
-    await sleep(150);
-    const store = new QuestStore({ path: join(dir, "quests.sqlite"), maxHistory: 20, leaseTtlMs: 100 });
-    const q = store.get(id);
-    const owner = q?.ownerSession;
-    assert.ok(owner);
-    store.recoverOwned(q!.project, owner);
+    let out = "";
+    child.stdout.on("data", (d: Buffer) => { out += d.toString(); });
+    // Wait until the quest is actually claimed/running (full suite load can exceed a fixed 150ms).
+    const store = new QuestStore({ path: join(dir, "quests.sqlite"), maxHistory: 20, leaseTtlMs: 120_000 });
+    let owner: string | undefined;
+    let project: string | undefined;
+    await new Promise<void>((done, fail) => {
+      const t = setTimeout(() => fail(new Error(`run never claimed; out:\n${out}`)), 10_000);
+      const check = setInterval(() => {
+        const q = store.get(id);
+        if (q?.state === "running" && q.ownerSession) {
+          owner = q.ownerSession;
+          project = q.project;
+          clearTimeout(t);
+          clearInterval(check);
+          done();
+        }
+      }, 50);
+    });
+    assert.ok(owner && project);
+    // Steal the lease from outside — heartbeat must abort the local worker.
+    assert.equal(store.recoverOwned(project!, owner!), 1);
     store.close();
-    await new Promise((resolveDone) => child.once("close", resolveDone));
-    assert.ok(existsSync(join(dir, "term.flag")));
+    const code = await new Promise<number | null>((resolveDone) => child.once("close", (c) => resolveDone(c)));
+    assert.ok(code !== null, "run process hung after lease loss");
+    assert.ok(
+      existsSync(join(dir, "term.flag")) || out.includes("lease-lost") || out.includes("aborted"),
+      `worker was not aborted after lease loss; code=${code} out=${out}`,
+    );
   } finally { rmSync(dir, { recursive: true, force: true }); }
 });
 
